@@ -1,3 +1,3 @@
-# javascript-threats
+# javascript-threats-hw-gh
 
 test
