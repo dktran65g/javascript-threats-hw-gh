@@ -1,0 +1,34 @@
+name: socket-security-issue-comment
+run-name: Socket Security Github Action
+on:
+  issue_comment:
+    types: [created, edited]
+jobs:
+  socket-security-comment:
+    permissions:
+      issues: write
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    if: ${{ github.event.issue.pull_request }}
+    steps:
+      - name: Check PR Issue Comment
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          PR_URL: ${{ github.event.issue.pull_request.url }}
+        run: |
+          # Extract the first line of the comment and strip newlines and carriage returns
+          COMMENT_STR=$(echo "$COMMENT_BODY" | head -n 1 | tr -d '\n\r')
+
+          # Extract the PR number from the PR URL (assuming the format ends with the number)
+          PR_NUMBER=$(basename "$PR_URL")
+
+          # Check if the comment contains "SocketSecurity ignore"
+          echo "$COMMENT_BODY" | head -n 1 | grep -iq "SocketSecurity ignore"
+          if [ $? -eq 0 ]; then
+            # Send the payload to Slack webhook
+            curl -X POST -H 'Content-type: application/json' -d "$(jq -n --arg user "$COMMENT_USER" --arg comment "$COMMENT_STR" --arg pr_url "$PR_URL" --arg pr_number "$PR_NUMBER" \
+            '{"text": "*\($user)* commented `\($comment)` on <\($pr_url)|GitHub Pull Request #\($pr_number)>"}')" $SLACK_WEBHOOK
+          fi
